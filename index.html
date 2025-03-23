@@ -1,0 +1,147 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Imóveis em Leilão</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 1rem;
+    }
+    h1 {
+      text-align: center;
+      color: #333;
+    }
+    .filtros {
+      max-width: 800px;
+      margin: 1rem auto;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      justify-content: center;
+    }
+    .filtros input, .filtros select {
+      padding: 0.5rem;
+      font-size: 1rem;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1rem;
+      max-width: 1200px;
+      margin: auto;
+    }
+    .card {
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .card img {
+      width: 100%;
+      height: 180px;
+      object-fit: cover;
+    }
+    .card-content {
+      padding: 1rem;
+    }
+    .card-content h2 {
+      font-size: 1.2rem;
+      margin: 0 0 0.5rem 0;
+      color: #222;
+    }
+    .card-content p {
+      margin: 0.2rem 0;
+      font-size: 0.95rem;
+      color: #555;
+    }
+    .card-content a {
+      display: inline-block;
+      margin-top: 0.5rem;
+      color: #1a73e8;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <h1>Imóveis em Leilão</h1>
+
+  <div class="filtros">
+    <input type="text" id="filtroTexto" placeholder="Buscar por título ou cidade...">
+    <select id="filtroOrigem">
+      <option value="">Todas as origens</option>
+    </select>
+  </div>
+
+  <div class="grid" id="listaImoveis"></div>
+
+  <script>
+    async function carregarImoveis() {
+      const response = await fetch('imoveis_leilao.csv');
+      const csv = await response.text();
+      const linhas = csv.trim().split('\n');
+      const cabecalho = linhas.shift().split(',');
+      const imoveis = linhas.map(l => {
+        const valores = l.split(',');
+        return cabecalho.reduce((obj, col, i) => {
+          obj[col] = valores[i];
+          return obj;
+        }, {});
+      });
+
+      const container = document.getElementById('listaImoveis');
+      const filtroTexto = document.getElementById('filtroTexto');
+      const filtroOrigem = document.getElementById('filtroOrigem');
+
+      const origens = new Set(imoveis.map(im => im.origem));
+      for (const origem of origens) {
+        const opt = document.createElement('option');
+        opt.value = origem;
+        opt.textContent = origem;
+        filtroOrigem.appendChild(opt);
+      }
+
+      function render() {
+        container.innerHTML = '';
+        const termo = filtroTexto.value.toLowerCase();
+        const origemSelecionada = filtroOrigem.value;
+
+        const filtrados = imoveis.filter(im => {
+          const buscaTexto = im.titulo.toLowerCase().includes(termo) || im.cidade.toLowerCase().includes(termo);
+          const origemOK = !origemSelecionada || im.origem === origemSelecionada;
+          return buscaTexto && origemOK;
+        });
+
+        for (const imovel of filtrados) {
+          const card = document.createElement('div');
+          card.className = 'card';
+          card.innerHTML = `
+            <img src="${imovel.imagem_local}" alt="Imagem do Imóvel">
+            <div class="card-content">
+              <h2>${imovel.titulo}</h2>
+              <p><strong>Cidade:</strong> ${imovel.cidade} / ${imovel.estado}</p>
+              <p><strong>Tipo:</strong> ${imovel.tipo}</p>
+              <p><strong>Valor Avaliação:</strong> R$ ${imovel.valor_avaliacao}</p>
+              <p><strong>Lance Inicial:</strong> R$ ${imovel.lance_inicial}</p>
+              <a href="${imovel.link}" target="_blank">Ver no site original</a>
+            </div>
+          `;
+          container.appendChild(card);
+        }
+      }
+
+      filtroTexto.addEventListener('input', render);
+      filtroOrigem.addEventListener('change', render);
+      render();
+    }
+
+    carregarImoveis();
+  </script>
+</body>
+</html>
